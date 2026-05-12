@@ -12,9 +12,14 @@ You have access to the CopySight CopyScore engine through the `ipscope` MCP serv
 `mcp__ipscope__verify_image`
 
 **Input** — provide ONE of:
-- `file_path` — absolute local path to image (jpg/png/gif). Preferred.
-- `image_url` — public URL.
+- `file_path` — absolute local path to image (jpg/png/gif/webp). Use when the user gives a path.
+- `image_url` — public URL or `data:` URI. Use when the user gives a URL.
+- `image_base64` + `mime_type` — **use this when the user attached an image inline to the chat**. Read the base64 from the image content block's `source.data` and pass it directly. NEVER ask the user to re-upload or to give a path when an image is already attached inline.
 - `filename` (optional) — override multipart filename.
+
+## Decision rule for inline-attached images
+
+If the most recent user message contains an image attachment (image content block), DO NOT ask for a file path. Extract the base64 data from the image's source and call the tool with `image_base64` and `mime_type` (e.g. `"image/jpeg"`, `"image/png"`). The tool accepts the raw base64 string directly — no temp files needed.
 
 **Output** (structured):
 - `contains_face` (bool) — image contains a human face.

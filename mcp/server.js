@@ -40,12 +40,45 @@ const VerifyResponse = z.object({
   detected_ips: z.array(Detection),
 });
 
-async function loadImage({ file_path, image_url, filename }) {
+function extByMime(mime) {
+  if (!mime) return "bin";
+  if (mime.includes("png")) return "png";
+  if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
+  if (mime.includes("gif")) return "gif";
+  if (mime.includes("webp")) return "webp";
+  return "bin";
+}
+
+function decodeBase64ToBlob(raw, mimeHint) {
+  let data = raw.trim();
+  let mime = mimeHint;
+  // strip data URI prefix if present: data:image/png;base64,XXXX
+  const m = data.match(/^data:([^;,]+);base64,(.+)$/i);
+  if (m) {
+    mime = mime || m[1];
+    data = m[2];
+  }
+  // strip any whitespace/newlines
+  data = data.replace(/\s+/g, "");
+  const buf = Buffer.from(data, "base64");
+  return { blob: new Blob([buf], { type: mime ?? undefined }), mime };
+}
+
+async function loadImage({ file_path, image_url, image_base64, mime_type, filename }) {
   if (file_path) {
     const buf = await readFile(file_path);
     return { blob: new Blob([buf]), filename: filename ?? basename(file_path) };
   }
+  if (image_base64) {
+    const { blob, mime } = decodeBase64ToBlob(image_base64, mime_type);
+    return { blob, filename: filename ?? `image.${extByMime(mime)}` };
+  }
   if (image_url) {
+    // also accept data: URLs here, just in case
+    if (image_url.startsWith("data:")) {
+      const { blob, mime } = decodeBase64ToBlob(image_url, mime_type);
+      return { blob, filename: filename ?? `image.${extByMime(mime)}` };
+    }
     const res = await fetch(image_url);
     if (!res.ok) {
       throw new Error(
@@ -60,7 +93,7 @@ async function loadImage({ file_path, image_url, filename }) {
       filename: filename ?? fallback,
     };
   }
-  throw new Error("Provide either file_path or image_url.");
+  throw new Error("Provide one of: file_path, image_url, or image_base64.");
 }
 
 function riskLevel(maxSimilarity) {
@@ -97,18 +130,35 @@ server.registerTool(
       "characters, celebrities, trademarks, brand/iconic designs, art/artists — and returns " +
       "each finding with similarity (0..1), owner, author, and a NORMALIZED bounding box " +
       "(x/y/width/height in 0..1 of image dimensions). Also reports contains_face and a " +
-      "computed risk_level (HIGH ≥0.7, MEDIUM ≥0.4, else LOW). Provide either file_path " +
-      "(absolute) or image_url (publicly reachable).",
+      "computed risk_level (HIGH ≥0.7, MEDIUM ≥0.4, else LOW). Provide ONE of: file_path " +
+      "(absolute local path), image_url (publicly reachable, or a data: URI), or " +
+      "image_base64 (raw base64 string of the image bytes — use this when the user " +
+      "attached an image inline to the chat).",
     inputSchema: {
       file_path: z
         .string()
         .optional()
-        .describe("Absolute local file path to the image (jpg/png/gif)."),
+        .describe("Absolute local file path to the image (jpg/png/gif/webp)."),
       image_url: z
         .string()
-        .url()
         .optional()
-        .describe("Public URL of the image. Used if file_path is not provided."),
+        .describe(
+          "Public URL of the image, OR a data: URI (data:image/png;base64,...). Used if file_path is not provided."
+        ),
+      image_base64: z
+        .string()
+        .optional()
+        .describe(
+          "Raw base64-encoded image data (no data: prefix needed, but data URIs are accepted). " +
+            "Use this when the user pasted/attached an image inline to the chat — you can read the " +
+            "base64 from the image content block's source.data and pass it here. Set mime_type alongside."
+        ),
+      mime_type: z
+        .string()
+        .optional()
+        .describe(
+          "MIME type for image_base64 (e.g. 'image/png', 'image/jpeg'). Optional but recommended."
+        ),
       filename: z
         .string()
         .optional()
@@ -127,11 +177,17 @@ server.registerTool(
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ file_path, image_url, filename }) => {
-    if (!file_path && !image_url) {
-      throw new Error("Provide either file_path or image_url.");
+  async ({ file_path, image_url, image_base64, mime_type, filename }) => {
+    if (!file_path && !image_url && !image_base64) {
+      throw new Error("Provide one of: file_path, image_url, or image_base64.");
     }
-    const { blob, filename: name } = await loadImage({ file_path, image_url, filename });
+    const { blob, filename: name } = await loadImage({
+      file_path,
+      image_url,
+      image_base64,
+      mime_type,
+      filename,
+    });
     const form = new FormData();
     form.append("file", blob, name);
 
