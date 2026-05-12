@@ -52,6 +52,9 @@ Keep it tight. No emoji unless the user asked for them.
 - `401 Unauthorized` → `COPYSIGHT_API_KEY` missing/invalid. Tell user to set it (see README).
 - `400 Bad Request` → unsupported file format (images + GIF only; video beta not yet exposed).
 - `429 Too Many Requests` → rate-limited; honor `retry-after`.
+- `Input is not a recognised image` → server's local magic-byte check refused. Either the file isn't actually a PNG/JPEG/GIF/WEBP, or it's corrupted.
+- `image_url '...' resolves to a blocked address` → SSRF guard. Loopback, private, link-local, and metadata IPs are refused. Ask user for a public URL.
+- `... is not a regular file (symlinks refused)` → symlink rejected. Resolve to the real path and retry.
 
 ## Setup check
 

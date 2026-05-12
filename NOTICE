@@ -1,0 +1,13 @@
+ipscope
+Copyright (c) 2026 Stan Hoody
+Licensed under the MIT License (see LICENSE).
+
+This package is open-source glue that calls the CopySight CopyScore™ HTTP API.
+It does not redistribute, vendor, or reimplement that service. The CopyScore™
+engine, trained models, IP catalog, and HTTP API are the property of CopySight
+AI, Inc., and are NOT covered by this project's MIT license. Use of the API
+requires a separate CopySight API key (cs_live_…) and is governed by CopySight's
+Terms of Service.
+
+"CopySight" and "CopyScore" are trademarks of CopySight AI, Inc., used here as
+nominative attribution for the underlying service.

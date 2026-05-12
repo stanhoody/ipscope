@@ -1,18 +1,31 @@
 {
   "name": "ipscope-mcp",
-  "version": "0.1.0",
-  "description": "MCP server for the ipscope plugin — wraps the CopySight CopyScore API",
+  "version": "0.2.0",
+  "description": "MCP server for the ipscope plugin — wraps the CopySight CopyScore™ API",
   "license": "MIT",
   "type": "module",
   "private": true,
   "main": "server.js",
+  "author": {
+    "name": "Stan Hoody",
+    "url": "https://github.com/stanhoody"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stanhoody/ipscope.git",
+    "directory": "mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/stanhoody/ipscope/issues"
+  },
+  "homepage": "https://github.com/stanhoody/ipscope#readme",
   "scripts": {
     "start": "node server.js",
     "inspect": "npx @modelcontextprotocol/inspector node server.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4",
-    "zod": "^3.23.8"
+    "@modelcontextprotocol/sdk": "~1.20.0",
+    "zod": "~3.24.0"
   },
   "engines": {
     "node": ">=18"

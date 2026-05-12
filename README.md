@@ -1,87 +1,69 @@
 # ipscope
 
-**Claude Code plugin for IP infringement checks.** Drop an image (file path or URL), get back a list of detected protected IP — characters, celebrities, trademarks, brand/iconic designs, artworks — each with a similarity score (0..1), owner, author, and bounding box. The plugin computes a risk level (HIGH / MEDIUM / LOW) so you know whether the asset is safe to release.
+> Drop an AI-generated image into Claude Code. Get back who owns what's in it — with a risk score, owner names, and bounding boxes — in 2 seconds.
 
-Powered by the [CopySight](https://copysight.ai) CopyScore engine. **Bring your own API key.**
+A Claude Code plugin that wraps the **CopySight CopyScore™** engine. Detects characters, celebrities, trademarks, brand designs, and artworks in any image. Returns a similarity score (0..1), the owner, the author, and a normalized bounding box for each match — plus a HIGH / MEDIUM / LOW risk verdict.
 
-## What you get
+**Bring your own CopySight API key** (`cs_live_…`). MIT-licensed open-source glue; the underlying CopyScore™ engine, models, and IP catalog belong to CopySight AI, Inc.
 
-- **Slash command** — `/ipscope <file_or_url>` — explicit, scriptable.
-- **Skill** — auto-triggers when you ask "check this image for IP", "is this safe to publish", "scan for trademarks", etc.
-- **MCP tool** — `mcp__ipscope__verify_image` — directly callable from any Claude Code session.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE) ![Node 18+](https://img.shields.io/badge/node-%3E%3D18-brightgreen) [![GitHub stars](https://img.shields.io/github/stars/stanhoody/ipscope?style=social)](https://github.com/stanhoody/ipscope)
+
+## Three ways to invoke
+
+```text
+1. Drop an image into chat   →   /ipscope                  ← no args, server auto-pulls from chat
+2. Path                       →   /ipscope ~/poster.png
+3. URL                        →   /ipscope https://i.imgur.com/abc.png
+```
+
+Or just talk to Claude: *"check this for IP"*, *"проверь это"*, *"is this safe to publish"* — the skill auto-triggers.
 
 ## Install
 
 ```bash
-# 1. Clone (anywhere — ~/Documents/Code/ is a good default)
 git clone https://github.com/stanhoody/ipscope.git ~/Documents/Code/ipscope
-
-# 2. Install MCP server deps
 cd ~/Documents/Code/ipscope/mcp && npm install
 
-# 3. Register the MCP server with Claude Code (user-scoped, with your API key)
 claude mcp add ipscope -s user \
-  -e COPYSIGHT_API_KEY=cs_live_xxxxxxxxxxxxxxxx \
+  -e COPYSIGHT_API_KEY=cs_live_REPLACE_ME \
   -- node ~/Documents/Code/ipscope/mcp/server.js
 
-# 4. Verify
-claude mcp list | grep ipscope
-# expected:  ipscope: node ... - ✓ Connected
-```
+claude mcp list | grep ipscope     # expect ✓ Connected
 
-Restart Claude Code if it was already running. The MCP tool `mcp__ipscope__verify_image` is now available in every session.
-
-### Also install the skill + slash command (optional but recommended)
-
-The MCP tool is enough to call from prompts. To get the auto-triggering skill and the `/ipscope <file>` slash command, copy them into your Claude Code config tree:
-
-```bash
 mkdir -p ~/.claude/skills ~/.claude/commands
 cp -R ~/Documents/Code/ipscope/skills/ipscope ~/.claude/skills/
 cp    ~/Documents/Code/ipscope/commands/ipscope.md ~/.claude/commands/
 ```
 
-(If you prefer plugin-style installation, the `.claude-plugin/plugin.json` manifest in this repo works with `/plugin install` — see Claude Code's plugin docs.)
+Restart Claude Code if it was already running. The MCP tool `mcp__ipscope__verify_image`, the skill, and the slash command are now available globally.
 
-## Get a CopySight API key
+### Windows / PowerShell
 
-CopySight sells API access to enterprises and AI platforms — pricing is volume-based with Evaluation and Pilot tiers for trial accounts. Contact <https://copysight.ai/contact> or talk to your account manager. Keys look like `cs_live_xxxxxxxxxxxxxxxx`.
+Use `$HOME` instead of `~`, `New-Item -ItemType Directory -Force` instead of `mkdir -p`, `Copy-Item -Recurse` instead of `cp -R`. Replace the trailing `\` line continuations with backtick `` ` `` continuations.
 
-## Usage
+### Get a CopySight API key
 
-### Slash command
+CopySight sells API access — Evaluation, Pilot, and Enterprise tiers — and bills per check. Contact <https://copysight.ai/contact>. Each API call is a billable check on your plan — **mind your loops**.
 
-```
-/ipscope /Users/me/Downloads/cover.jpg
-/ipscope https://cdn.example.com/poster.png
-```
+## What you get
 
-### Natural language
+| | |
+|---|---|
+| **MCP tool** | `mcp__ipscope__verify_image` — direct from any Claude Code session |
+| **Slash command** | `/ipscope [file_or_url]` |
+| **Skill** | Auto-triggers on natural-language IP-check requests (EN + RU) |
 
-```
-> check this image for IP: ~/Downloads/cover.jpg
-> is this AI image safe to publish? https://i.imgur.com/abcd.png
-> проверь на копирайт-риски /tmp/render.jpg
-```
+## Smoke test
 
-The skill picks it up automatically.
-
-### Inline-attached images (drag-and-drop)
-
-Drop an image straight into the chat and run `/ipscope` (or just say "проверь это"). The MCP server auto-pulls the most recent inline image from your active Claude Code session transcript at `~/.claude/projects/<project>/<session>.jsonl` and runs it. No paths needed.
-
-This works because Claude Code records image attachments in the session JSONL as base64 content blocks. The server reads the most recently modified transcript, finds the last user-message image, decodes it, and posts to CopySight. If you have multiple Claude Code windows open, the one whose transcript was most recently written wins — which is almost always the one that just received your image.
-
-### Direct MCP call
+After install, in Claude Code:
 
 ```
-Tool: mcp__ipscope__verify_image
-Args: {}                                              # auto-pull from chat
-# or
-Args: { "file_path": "/abs/path/to/image.png" }
-Args: { "image_url": "https://..." }
-Args: { "image_base64": "<base64>", "mime_type": "image/png" }
+/ipscope https://upload.wikimedia.org/wikipedia/commons/3/36/AT%26T_logo_2016.svg.png
 ```
+
+Expected output (truncated): `HIGH risk — AT&T Logo — Trademarks — sim ~1.00`.
+
+Or drop any image into chat and type `/ipscope`.
 
 ## Output shape
 
@@ -114,6 +96,24 @@ Args: { "image_base64": "<base64>", "mime_type": "image/png" }
 
 Categories observed: `Trademarks`, `Brand and iconic designs`, `Characters`, `Celebrities and famous people`, `Art and artists`.
 
+## Direct MCP call
+
+```jsonc
+{ }                                                      // auto-pull from chat
+{ "file_path": "/abs/path/to/image.png" }
+{ "image_url": "https://..." }
+{ "image_base64": "<base64>", "mime_type": "image/png" }
+```
+
+## Privacy & data handling
+
+- **Where bytes go:** every call sends one image to `https://api.copysight.ai/v1/verify` over HTTPS, with your `cs_live_…` key in `X-API-Key`. Nothing is sent anywhere else.
+- **What the server reads locally:** when called with no arguments, the server reads ONLY this project's own Claude Code session transcript at `~/.claude/projects/<sanitized-cwd>/*.jsonl` to find the latest inline image you attached. It does NOT scan other projects, other sessions, or any file outside that directory.
+- **What's blocked:** symlinks (refused), non-image files (refused via magic-byte sniff), private/loopback/link-local URLs (SSRF guard), images larger than 25 MiB (refused).
+- **Logs:** the server prints only the API base and version to stderr. No key, no image bytes, no request bodies are logged.
+
+See [SECURITY.md](./SECURITY.md) for the full threat model.
+
 ## Errors
 
 | Status | Meaning                                                                |
@@ -124,39 +124,32 @@ Categories observed: `Trademarks`, `Brand and iconic designs`, `Characters`, `Ce
 
 ## Limitations
 
-- **Images only** today. Video is in beta on CopySight's side — not wired into this plugin yet.
-- **One image per call.** Batch via your own loop or scripting.
-- **Public docs at <https://copysight.ai/docs> are stale** — the live API returns `{contains_face, detected_ips[]}` with `similarity` (0..1) and normalized bounding boxes. This plugin uses the live shape, not the documented one.
+- **Images only.** Video is in beta on CopySight's side, not exposed here yet.
+- **One image per call.** Batch via your own loop. Each call is a billable check.
+- **Public docs at <https://copysight.ai/docs> are catching up** — this plugin is built against the live v1 response shape (`{contains_face, detected_ips[]}` with `similarity` 0..1 and normalized bboxes), not the older shape the public docs still describe.
 
 ## Requirements
 
 - Node.js 18+
-- Claude Code (plugin install) or any MCP-compatible client
-- A CopySight API key
+- Claude Code
+- A CopySight API key (Evaluation / Pilot / Enterprise)
 
 ## Local development
 
-```
+```bash
 cd mcp
 npm install
 COPYSIGHT_API_KEY=cs_live_xxx npm run inspect    # opens MCP Inspector
 ```
 
-To smoke-test against a real image:
+## License & trademarks
 
-```
-COPYSIGHT_API_KEY=cs_live_xxx node -e '
-import("./mcp/server.js");
-' &
-# Then send JSON-RPC over stdio — or just use Inspector.
-```
+[MIT](./LICENSE) for the wrapper code in this repo.
 
-## License
+The CopyScore™ engine, models, IP catalog, and HTTP API at `api.copysight.ai` are the property of **CopySight AI, Inc.** and are NOT covered by this license. See [NOTICE](./NOTICE) for the full attribution.
 
-MIT — see [LICENSE](./LICENSE).
-
-`ipscope` wraps the CopySight API; the underlying CopyScore engine, the trained models, and the IP catalog belong to CopySight AI, Inc. This plugin is open-source glue.
+"CopySight" and "CopyScore" are trademarks of CopySight AI, Inc., used here as nominative attribution.
 
 ## Credits
 
-Built by [Stan Hoody](https://github.com/stanhoody) using Claude Code. CopyScore engine by [CopySight](https://copysight.ai).
+Built by [Stan Hoody](https://github.com/stanhoody) using Claude Code. CopyScore™ engine by [CopySight](https://copysight.ai).

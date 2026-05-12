@@ -19,7 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-This package wraps the CopySight CopyScore API. The CopyScore engine, models,
-and IP catalog are the property of CopySight AI, Inc. and are not covered by
-this license. You need a CopySight API key (cs_live_…) to use this software.
