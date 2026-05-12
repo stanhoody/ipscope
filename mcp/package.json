@@ -1,0 +1,20 @@
+{
+  "name": "ipscope-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the ipscope plugin — wraps the CopySight CopyScore API",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "inspect": "npx @modelcontextprotocol/inspector node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

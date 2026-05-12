@@ -1,0 +1,22 @@
+{
+  "name": "ipscope",
+  "version": "0.1.0",
+  "description": "Detect IP infringement risk in images via the CopySight CopyScore API. Drop a file or URL — get a list of detected characters, celebrities, trademarks, brand designs, and artworks with similarity scores and risk level.",
+  "author": {
+    "name": "Stan Hoody"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/REPLACE_WITH_OWNER/ipscope",
+  "mcpServers": {
+    "ipscope": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/server.js"]
+    }
+  },
+  "skills": [
+    "./skills/ipscope"
+  ],
+  "commands": [
+    "./commands/ipscope.md"
+  ]
+}
