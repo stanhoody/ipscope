@@ -66,11 +66,21 @@ CopySight sells API access to enterprises and AI platforms — pricing is volume
 
 The skill picks it up automatically.
 
+### Inline-attached images (drag-and-drop)
+
+Claude Code does **not** pass the raw bytes of inline-attached images to MCP tools — the model can see the image visually but the tool layer can't reach the bytes. So if you just drop a picture into the chat and hit `/ipscope`, the skill will ask you for a path or URL.
+
+Fastest workflow on macOS: in Finder, hold **⌥ Option** while dragging the file into the chat — it pastes the absolute path instead of attaching the image. Then `/ipscope <path>` or natural language works.
+
 ### Direct MCP call
 
 ```
 Tool: mcp__ipscope__verify_image
 Args: { "file_path": "/abs/path/to/image.png" }
+# or
+Args: { "image_url": "https://..." }
+# or (for clients that DO surface bytes)
+Args: { "image_base64": "<base64>", "mime_type": "image/png" }
 ```
 
 ## Output shape

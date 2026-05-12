@@ -14,12 +14,21 @@ You have access to the CopySight CopyScore engine through the `ipscope` MCP serv
 **Input** — provide ONE of:
 - `file_path` — absolute local path to image (jpg/png/gif/webp). Use when the user gives a path.
 - `image_url` — public URL or `data:` URI. Use when the user gives a URL.
-- `image_base64` + `mime_type` — **use this when the user attached an image inline to the chat**. Read the base64 from the image content block's `source.data` and pass it directly. NEVER ask the user to re-upload or to give a path when an image is already attached inline.
+- `image_base64` + `mime_type` — raw base64 string. Use only when bytes are actually available to you (e.g. you just wrote/loaded the file in this same turn). Most Claude Code clients do NOT surface raw bytes from inline chat attachments to the tool layer, so don't assume this works for drag-and-dropped images.
 - `filename` (optional) — override multipart filename.
 
-## Decision rule for inline-attached images
+## What to do when the user attached an image inline to the chat
 
-If the most recent user message contains an image attachment (image content block), DO NOT ask for a file path. Extract the base64 data from the image's source and call the tool with `image_base64` and `mime_type` (e.g. `"image/jpeg"`, `"image/png"`). The tool accepts the raw base64 string directly — no temp files needed.
+Most clients (including Claude Code today) do not expose the raw bytes of an inline-attached image to the agent — you can see the image visually but you cannot read `source.data` as a string to forward. **Do not pretend you can.** Instead, ask the user for a path or URL, and tell them the fastest way to produce one. One short, friendly message:
+
+> Картинку в чате я вижу, но MCP-туллу нужны байты на диске. Кинь путь или ссылку — быстрее всего так:
+> - в Finder зажми **⌥ Option** и перетащи файл в чат → подставится абсолютный путь
+> - или скопируй файл и `pbpaste` -ом сохрани во временный путь (если есть `pngpaste`: `pngpaste /tmp/ipscope.png`)
+> - или дай публичный URL
+
+Then wait for the user's reply with a path/URL and run `verify_image`. Do not invent a path.
+
+If the user has clearly already given you a path or URL in the same message (even alongside an inline image), use that and skip the prompt.
 
 **Output** (structured):
 - `contains_face` (bool) — image contains a human face.
