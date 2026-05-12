@@ -14,7 +14,7 @@ Powered by the [CopySight](https://copysight.ai) CopyScore engine. **Bring your 
 
 ```bash
 # 1. Clone (anywhere — ~/Documents/Code/ is a good default)
-git clone https://github.com/REPLACE_WITH_OWNER/ipscope.git ~/Documents/Code/ipscope
+git clone https://github.com/stanhoody/ipscope.git ~/Documents/Code/ipscope
 
 # 2. Install MCP server deps
 cd ~/Documents/Code/ipscope/mcp && npm install
@@ -149,4 +149,4 @@ MIT — see [LICENSE](./LICENSE).
 
 ## Credits
 
-Built by [Stan Hoody](https://github.com/REPLACE_WITH_OWNER) using Claude Code. CopyScore engine by [CopySight](https://copysight.ai).
+Built by [Stan Hoody](https://github.com/stanhoody) using Claude Code. CopyScore engine by [CopySight](https://copysight.ai).

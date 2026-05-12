@@ -6,7 +6,7 @@
     "name": "Stan Hoody"
   },
   "license": "MIT",
-  "homepage": "https://github.com/REPLACE_WITH_OWNER/ipscope",
+  "homepage": "https://github.com/stanhoody/ipscope",
   "mcpServers": {
     "ipscope": {
       "command": "node",
