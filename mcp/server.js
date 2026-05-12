@@ -5,8 +5,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { readFile } from "node:fs/promises";
-import { basename } from "node:path";
+import { readFile, readdir, stat } from "node:fs/promises";
+import { basename, join } from "node:path";
+import { homedir } from "node:os";
 
 const API_BASE = process.env.COPYSIGHT_API_BASE ?? "https://api.copysight.ai/v1";
 const API_KEY = process.env.COPYSIGHT_API_KEY;
@@ -62,6 +63,89 @@ function decodeBase64ToBlob(raw, mimeHint) {
   data = data.replace(/\s+/g, "");
   const buf = Buffer.from(data, "base64");
   return { blob: new Blob([buf], { type: mime ?? undefined }), mime };
+}
+
+/**
+ * Walk all session-transcript JSONLs under ~/.claude/projects/ and return the
+ * most recently MODIFIED file. That's almost always the active session that
+ * just received the user's message with the inline image.
+ */
+async function findActiveTranscript() {
+  const root = join(homedir(), ".claude", "projects");
+  const projects = await readdir(root).catch(() => []);
+  let best = null; // { fp, mtime }
+  for (const proj of projects) {
+    const projDir = join(root, proj);
+    let entries;
+    try {
+      entries = await readdir(projDir);
+    } catch {
+      continue;
+    }
+    for (const f of entries) {
+      if (!f.endsWith(".jsonl")) continue;
+      const fp = join(projDir, f);
+      const s = await stat(fp).catch(() => null);
+      if (!s || !s.isFile()) continue;
+      if (!best || s.mtimeMs > best.mtime) best = { fp, mtime: s.mtimeMs };
+    }
+  }
+  return best?.fp ?? null;
+}
+
+/**
+ * Scan a transcript JSONL from the bottom, return the most recent user-message
+ * image content block { base64, mime }, or null if none found.
+ */
+async function findLatestUserImage(transcriptPath) {
+  const raw = await readFile(transcriptPath, "utf8");
+  const lines = raw.split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
+    if (!line) continue;
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    // Match user-side messages only (not assistant tool results etc.)
+    const role = entry?.message?.role ?? entry?.type;
+    if (role !== "user") continue;
+    const content = entry?.message?.content;
+    if (!Array.isArray(content)) continue;
+    // Newest images sit at the END of the content array; scan reverse.
+    for (let j = content.length - 1; j >= 0; j--) {
+      const blk = content[j];
+      if (
+        blk?.type === "image" &&
+        blk?.source?.type === "base64" &&
+        typeof blk.source.data === "string" &&
+        blk.source.data.length > 100
+      ) {
+        return { base64: blk.source.data, mime: blk.source.media_type };
+      }
+    }
+  }
+  return null;
+}
+
+async function loadFromActiveChat() {
+  const tp = await findActiveTranscript();
+  if (!tp) {
+    throw new Error(
+      "No Claude Code session transcript found under ~/.claude/projects/. " +
+        "Provide file_path, image_url, or image_base64 explicitly."
+    );
+  }
+  const found = await findLatestUserImage(tp);
+  if (!found) {
+    throw new Error(
+      `No inline image attachment found in the active session transcript (${tp}). ` +
+        "Attach an image to the chat, or provide file_path / image_url."
+    );
+  }
+  return found;
 }
 
 async function loadImage({ file_path, image_url, image_base64, mime_type, filename }) {
@@ -130,10 +214,12 @@ server.registerTool(
       "characters, celebrities, trademarks, brand/iconic designs, art/artists — and returns " +
       "each finding with similarity (0..1), owner, author, and a NORMALIZED bounding box " +
       "(x/y/width/height in 0..1 of image dimensions). Also reports contains_face and a " +
-      "computed risk_level (HIGH ≥0.7, MEDIUM ≥0.4, else LOW). Provide ONE of: file_path " +
-      "(absolute local path), image_url (publicly reachable, or a data: URI), or " +
-      "image_base64 (raw base64 string of the image bytes — use this when the user " +
-      "attached an image inline to the chat).",
+      "computed risk_level (HIGH ≥0.7, MEDIUM ≥0.4, else LOW). Inputs (provide ONE, " +
+      "or NONE to auto-pull from the active Claude Code chat): file_path (absolute), " +
+      "image_url (public URL or data: URI), image_base64 (+ mime_type). When all three " +
+      "are omitted, the server reads the most recently modified Claude Code session " +
+      "transcript under ~/.claude/projects/ and extracts the latest inline image the " +
+      "user attached — so 'drop image in chat → call this tool with no args' works.",
     inputSchema: {
       file_path: z
         .string()
@@ -178,8 +264,13 @@ server.registerTool(
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
   async ({ file_path, image_url, image_base64, mime_type, filename }) => {
+    // If no explicit input given, auto-pull the most recent inline image
+    // from the active Claude Code session transcript. This makes "drop image
+    // into chat → /ipscope" or "проверь это" Just Work without paths.
     if (!file_path && !image_url && !image_base64) {
-      throw new Error("Provide one of: file_path, image_url, or image_base64.");
+      const fromChat = await loadFromActiveChat();
+      image_base64 = fromChat.base64;
+      mime_type = mime_type ?? fromChat.mime;
     }
     const { blob, filename: name } = await loadImage({
       file_path,

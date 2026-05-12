@@ -68,18 +68,18 @@ The skill picks it up automatically.
 
 ### Inline-attached images (drag-and-drop)
 
-Claude Code does **not** pass the raw bytes of inline-attached images to MCP tools — the model can see the image visually but the tool layer can't reach the bytes. So if you just drop a picture into the chat and hit `/ipscope`, the skill will ask you for a path or URL.
+Drop an image straight into the chat and run `/ipscope` (or just say "проверь это"). The MCP server auto-pulls the most recent inline image from your active Claude Code session transcript at `~/.claude/projects/<project>/<session>.jsonl` and runs it. No paths needed.
 
-Fastest workflow on macOS: in Finder, hold **⌥ Option** while dragging the file into the chat — it pastes the absolute path instead of attaching the image. Then `/ipscope <path>` or natural language works.
+This works because Claude Code records image attachments in the session JSONL as base64 content blocks. The server reads the most recently modified transcript, finds the last user-message image, decodes it, and posts to CopySight. If you have multiple Claude Code windows open, the one whose transcript was most recently written wins — which is almost always the one that just received your image.
 
 ### Direct MCP call
 
 ```
 Tool: mcp__ipscope__verify_image
-Args: { "file_path": "/abs/path/to/image.png" }
+Args: {}                                              # auto-pull from chat
 # or
+Args: { "file_path": "/abs/path/to/image.png" }
 Args: { "image_url": "https://..." }
-# or (for clients that DO surface bytes)
 Args: { "image_base64": "<base64>", "mime_type": "image/png" }
 ```
 
